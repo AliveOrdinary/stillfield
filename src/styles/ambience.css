@@ -1,0 +1,127 @@
+/* ── Entry gate ────────────────────────────────────
+   Minimal overlay: one tap steps you inside the dome and starts the
+   brown noise. Rendered by JS only; a <noscript> rule hides it so
+   no-JS visitors see the dome directly. */
+.gate {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background: var(--bg);
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  opacity: 1;
+  transition: opacity 0.6s ease;
+}
+.gate.is-closing {
+  opacity: 0;
+  pointer-events: none;
+}
+.gate-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+.gate-mark {
+  width: 30px;
+  height: 30px;
+  color: var(--ink);
+  margin-bottom: 26px;
+}
+.gate-word {
+  font-family: var(--display);
+  font-size: 21px;
+  letter-spacing: 0.42em;
+  color: var(--ink);
+  line-height: 1;
+  padding-left: 0.42em;
+}
+.gate-hint {
+  margin-top: 22px;
+  font-size: 12.5px;
+  font-weight: 300;
+  letter-spacing: 0.04em;
+  color: var(--ink-dim);
+}
+.gate-enter {
+  margin-top: 40px;
+  padding: 15px 36px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--ink);
+  font-family: var(--body);
+  font-size: 11.5px;
+  font-weight: 400;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  transition: border-color 0.3s ease, background 0.3s ease, color 0.3s ease;
+}
+.gate-enter:hover {
+  background: var(--ink);
+  color: #0a0a0a;
+  border-color: var(--ink);
+}
+.gate-silent {
+  margin-top: 18px;
+  background: none;
+  border: none;
+  color: var(--ink-faint);
+  font-family: var(--body);
+  font-size: 10px;
+  font-weight: 300;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  transition: color 0.25s ease;
+}
+.gate-silent:hover {
+  color: var(--ink-dim);
+}
+
+/* ── Topbar sound toggle ───────────────────────── */
+.topbar-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 22px;
+}
+.sound-toggle {
+  background: none;
+  border: none;
+  padding: 2px;
+  display: inline-flex;
+  align-items: center;
+  color: var(--ink);
+  opacity: 0.85;
+  transition: opacity 0.25s ease;
+}
+.sound-toggle:hover {
+  opacity: 1;
+}
+.sound-toggle .snd {
+  display: none;
+  width: 22px;
+  height: 22px;
+}
+/* default = off (sound not playing): show the muted icon */
+.sound-toggle .snd-off {
+  display: block;
+}
+.sound-toggle.is-on .snd-off {
+  display: none;
+}
+.sound-toggle.is-on .snd-on {
+  display: block;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gate {
+    transition: none;
+  }
+}
+
+@media (max-width: 820px) {
+  .topbar-actions {
+    gap: 18px;
+  }
+}

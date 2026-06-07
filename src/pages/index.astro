@@ -2,8 +2,11 @@
 import Base from '../layouts/Base.astro';
 import Mark from '../components/Mark.astro';
 import Modal from '../components/Modal';
+import Ambience from '../components/Ambience';
+import Dome from '../components/Dome';
 import '../styles/global.css';
 import '../styles/modal.css';
+import '../styles/ambience.css';
 ---
 <Base>
   <Fragment slot="head">
@@ -14,35 +17,34 @@ import '../styles/modal.css';
   <h1 class="sr-only">Stillfield — non-sensory calm pods for spas, hotels &amp; workplaces</h1>
 
   <main class="stage">
-    <div class="eclipse" aria-hidden="true">
-      <div class="halo-broad"></div>
-      <div class="halo-ring"></div>
-      <div class="noise"></div>
-      <div class="sphere"></div>
-    </div>
+    <!-- Dome interior (WebGL) — decorative; real content is below in the HTML -->
+    <Dome client:idle />
 
     <header class="topbar">
       <a href="/" class="brand" aria-label="Stillfield home">
         <Mark />
         <span class="wordmark">STILLFIELD</span>
       </a>
-      <button class="grid-toggle" data-cta aria-label="Register interest" aria-haspopup="dialog">
-        <span></span><span></span><span></span><span></span>
-      </button>
+      <div class="topbar-actions">
+        <button class="sound-toggle" data-sound type="button" aria-label="Toggle ambient sound" aria-pressed="false" hidden>
+          <svg class="snd snd-on" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true">
+            <path d="M4 9v6h3l5 4V5L7 9H4z" fill="currentColor" stroke="none"/>
+            <path d="M16 8.5a5 5 0 0 1 0 7"/>
+            <path d="M18.5 6a8.5 8.5 0 0 1 0 12"/>
+          </svg>
+          <svg class="snd snd-off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true">
+            <path d="M4 9v6h3l5 4V5L7 9H4z" fill="currentColor" stroke="none"/>
+            <path d="M16 9.5l5 5M21 9.5l-5 5"/>
+          </svg>
+        </button>
+        <button class="grid-toggle" data-cta aria-label="Register interest" aria-haspopup="dialog">
+          <span></span><span></span><span></span><span></span>
+        </button>
+      </div>
     </header>
 
-    <div class="lower" aria-label="About Stillfield">
-      <div class="caption lower-left">
-        <span class="bullet" aria-hidden="true"></span>
-        <p class="lede">A space where the noise ends.</p>
-      </div>
-      <div class="lower-right">
-        <div class="caption">
-          <span class="bullet" aria-hidden="true"></span>
-          <p class="body">Non-sensory pods that deliver deep calm in 15&ndash;30 minutes. Designed for spas, wellness centres, hotels, and forward-thinking workplaces.</p>
-        </div>
-        <button class="register" data-cta aria-haspopup="dialog">Register Interest</button>
-      </div>
+    <div class="floor-cta">
+      <button class="register" data-cta aria-haspopup="dialog">Register Interest</button>
     </div>
 
     <div class="corner" aria-hidden="true">
@@ -52,4 +54,5 @@ import '../styles/modal.css';
   </main>
 
   <Modal client:idle />
+  <Ambience client:load />
 </Base>
