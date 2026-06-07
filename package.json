@@ -1,0 +1,25 @@
+{
+  "name": "stillfield",
+  "type": "module",
+  "version": "0.0.1",
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
+    "astro": "astro"
+  },
+  "dependencies": {
+    "@astrojs/react": "^5.0.7",
+    "@astrojs/sitemap": "^3.7.3",
+    "@fontsource/hanken-grotesk": "^5.2.8",
+    "@fontsource/tenor-sans": "^5.2.8",
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
+    "astro": "^6.4.4",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7"
+  }
+}

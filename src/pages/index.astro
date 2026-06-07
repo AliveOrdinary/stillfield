@@ -1,0 +1,55 @@
+---
+import Base from '../layouts/Base.astro';
+import Mark from '../components/Mark.astro';
+import Modal from '../components/Modal';
+import '../styles/global.css';
+import '../styles/modal.css';
+---
+<Base>
+  <Fragment slot="head">
+    <link rel="preload" href="/fonts/tenor-sans-400.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href="/fonts/hanken-grotesk-300.woff2" as="font" type="font/woff2" crossorigin />
+  </Fragment>
+
+  <h1 class="sr-only">Stillfield — non-sensory calm pods for spas, hotels &amp; workplaces</h1>
+
+  <main class="stage">
+    <div class="eclipse" aria-hidden="true">
+      <div class="halo-broad"></div>
+      <div class="halo-ring"></div>
+      <div class="noise"></div>
+      <div class="sphere"></div>
+    </div>
+
+    <header class="topbar">
+      <a href="/" class="brand" aria-label="Stillfield home">
+        <Mark />
+        <span class="wordmark">STILLFIELD</span>
+      </a>
+      <button class="grid-toggle" data-cta aria-label="Register interest" aria-haspopup="dialog">
+        <span></span><span></span><span></span><span></span>
+      </button>
+    </header>
+
+    <div class="lower" aria-label="About Stillfield">
+      <div class="caption lower-left">
+        <span class="bullet" aria-hidden="true"></span>
+        <p class="lede">A space where the noise ends.</p>
+      </div>
+      <div class="lower-right">
+        <div class="caption">
+          <span class="bullet" aria-hidden="true"></span>
+          <p class="body">Non-sensory pods that deliver deep calm in 15&ndash;30 minutes. Designed for spas, wellness centres, hotels, and forward-thinking workplaces.</p>
+        </div>
+        <button class="register" data-cta aria-haspopup="dialog">Register Interest</button>
+      </div>
+    </div>
+
+    <div class="corner" aria-hidden="true">
+      <Mark />
+      <div class="corner-text">STILL<br />FIELD</div>
+    </div>
+  </main>
+
+  <Modal client:idle />
+</Base>

@@ -1,0 +1,13 @@
+{
+  "name": "Stillfield",
+  "short_name": "Stillfield",
+  "description": "Non-sensory pods that deliver deep calm.",
+  "start_url": "/",
+  "display": "browser",
+  "background_color": "#060607",
+  "theme_color": "#060607",
+  "icons": [
+    { "src": "/apple-touch-icon.png", "sizes": "180x180", "type": "image/png" },
+    { "src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml" }
+  ]
+}
