@@ -9,7 +9,7 @@ const {
 } = Astro.props;
 
 const canonical = new URL(Astro.url.pathname, Astro.site).toString();
-const ogImage = new URL('/og.png', Astro.site).toString();
+const ogImage = new URL('/og.jpg', Astro.site).toString();
 ---
 <!doctype html>
 <html lang="en-GB">
@@ -85,9 +85,6 @@ const ogImage = new URL('/og.png', Astro.site).toString();
   })} />
 
   <slot name="head" />
-
-  <!-- If JS is off, the entry gate can't be dismissed — hide it so the dome shows. -->
-  <noscript><style>.gate{display:none !important;}</style></noscript>
 </head>
 <body>
   <slot />

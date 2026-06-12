@@ -2,11 +2,9 @@
 import Base from '../layouts/Base.astro';
 import Mark from '../components/Mark.astro';
 import Modal from '../components/Modal';
-import Ambience from '../components/Ambience';
-import Dome from '../components/Dome';
+import Sound from '../components/Sound';
 import '../styles/global.css';
 import '../styles/modal.css';
-import '../styles/ambience.css';
 ---
 <Base>
   <Fragment slot="head">
@@ -17,42 +15,40 @@ import '../styles/ambience.css';
   <h1 class="sr-only">Stillfield — non-sensory calm pods for spas, hotels &amp; workplaces</h1>
 
   <main class="stage">
-    <!-- Dome interior (WebGL) — decorative; real content is below in the HTML -->
-    <Dome client:idle />
+    <!-- The noise of the world: restless grain filling the viewport.
+         Pure CSS/SVG, decorative only; all real content is in the band below. -->
+    <div class="field" aria-hidden="true">
+      <div class="field-churn"></div>
+      <div class="field-grain"></div>
+      <div class="field-vignette"></div>
+    </div>
 
     <header class="topbar">
       <a href="/" class="brand" aria-label="Stillfield home">
         <Mark />
         <span class="wordmark">STILLFIELD</span>
       </a>
-      <div class="topbar-actions">
-        <button class="sound-toggle" data-sound type="button" aria-label="Toggle ambient sound" aria-pressed="false" hidden>
-          <svg class="snd snd-on" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true">
-            <path d="M4 9v6h3l5 4V5L7 9H4z" fill="currentColor" stroke="none"/>
-            <path d="M16 8.5a5 5 0 0 1 0 7"/>
-            <path d="M18.5 6a8.5 8.5 0 0 1 0 12"/>
-          </svg>
-          <svg class="snd snd-off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true">
-            <path d="M4 9v6h3l5 4V5L7 9H4z" fill="currentColor" stroke="none"/>
-            <path d="M16 9.5l5 5M21 9.5l-5 5"/>
-          </svg>
-        </button>
-        <button class="grid-toggle" data-cta aria-label="Register interest" aria-haspopup="dialog">
-          <span></span><span></span><span></span><span></span>
-        </button>
-      </div>
+      <button class="sound-toggle" data-sound type="button" aria-label="Toggle ambient sound" aria-pressed="false" hidden>
+        <svg class="snd snd-on" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true">
+          <path d="M4 9v6h3l5 4V5L7 9H4z" fill="currentColor" stroke="none"/>
+          <path d="M16 8.5a5 5 0 0 1 0 7"/>
+          <path d="M18.5 6a8.5 8.5 0 0 1 0 12"/>
+        </svg>
+        <svg class="snd snd-off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true">
+          <path d="M4 9v6h3l5 4V5L7 9H4z" fill="currentColor" stroke="none"/>
+          <path d="M16 9.5l5 5M21 9.5l-5 5"/>
+        </svg>
+      </button>
     </header>
 
-    <div class="floor-cta">
+    <!-- The silence: one perfectly still band where the noise stops. -->
+    <section class="band">
+      <h2 class="lede">A space where the noise ends.</h2>
+      <p class="band-copy">Non-sensory pods that deliver deep calm in 15&ndash;30 minutes. Designed for spas, wellness centres, hotels, and forward-thinking workplaces.</p>
       <button class="register" data-cta aria-haspopup="dialog">Register Interest</button>
-    </div>
-
-    <div class="corner" aria-hidden="true">
-      <Mark />
-      <div class="corner-text">STILL<br />FIELD</div>
-    </div>
+    </section>
   </main>
 
   <Modal client:idle />
-  <Ambience client:load />
+  <Sound client:idle />
 </Base>
