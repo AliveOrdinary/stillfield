@@ -2,11 +2,11 @@ import { useEffect, useRef } from 'react';
 
 /*
   The dome. A single full-screen fragment shader on raw WebGL (no three.js):
-  the camera stands inside a vast monochrome rotunda, raymarched analytically
-  (sphere + floor), with a circular oculus at the crown. Through the oculus:
-  the bright, churning noise of the world. Falling from it: a volumetric
-  shaft of light — the only thing that moves in the room — landing in a pool
-  on the floor where the CTA sits. Decorative only (aria-hidden); all real
+  the camera stands inside a vast, sealed, black rotunda — no opening, no
+  sky. The only light in the room is the lamp: a low glow at the Register
+  pill's position on the floor, lighting the chamber from below and falling
+  to true black overhead. The lamp breathes slowly, and swells when the
+  pointer approaches the button. Decorative only (aria-hidden); all real
   content is server-rendered HTML.
 */
 
@@ -16,11 +16,11 @@ precision highp float;
 uniform vec2  uRes;
 uniform float uTime;
 uniform vec2  uSway;   // eased mouse parallax, [-1,1]
+uniform float uGlow;   // lamp energy: boot ramp × pointer proximity, 0..1
 
-const float R  = 6.0;                       // dome radius
-const vec3  OC = vec3(0.0, 6.0, 0.0);       // oculus centre (crown)
-const float OR = 0.78;                      // oculus radius
-const vec3  LD = normalize(vec3(0.0, -1.0, -0.26)); // light, leaning into the room
+const float R  = 6.0;                     // dome radius
+const vec3  LP = vec3(0.0, 0.16, -1.5);   // the lamp: just above the floor,
+                                          // where the Register pill stands
 
 // ── noise ──────────────────────────────────────────
 float hash(vec2 p) {
@@ -28,53 +28,16 @@ float hash(vec2 p) {
   p += dot(p, p + 34.345);
   return fract(p.x * p.y);
 }
-float hash3(vec3 p) {
-  p = fract(p * 0.3183099 + vec3(0.1, 0.2, 0.3));
-  p *= 17.0;
-  return fract(p.x * p.y * p.z * (p.x + p.y + p.z));
-}
 float vnoise(vec2 p) {
   vec2 i = floor(p), f = fract(p);
   vec2 u = f * f * (3.0 - 2.0 * f);
   return mix(mix(hash(i), hash(i + vec2(1, 0)), u.x),
              mix(hash(i + vec2(0, 1)), hash(i + vec2(1, 1)), u.x), u.y);
 }
-float vnoise3(vec3 p) {
-  vec3 i = floor(p), f = fract(p);
-  vec3 u = f * f * (3.0 - 2.0 * f);
-  return mix(
-    mix(mix(hash3(i), hash3(i + vec3(1, 0, 0)), u.x),
-        mix(hash3(i + vec3(0, 1, 0)), hash3(i + vec3(1, 1, 0)), u.x), u.y),
-    mix(mix(hash3(i + vec3(0, 0, 1)), hash3(i + vec3(1, 0, 1)), u.x),
-        mix(hash3(i + vec3(0, 1, 1)), hash3(i + vec3(1, 1, 1)), u.x), u.y),
-    u.z);
-}
 float fbm(vec2 p) {
   float v = 0.0, a = 0.5;
   for (int i = 0; i < 4; i++) { v += a * vnoise(p); p *= 2.03; a *= 0.5; }
   return v;
-}
-float fbm3(vec3 p) {
-  float v = 0.0, a = 0.5;
-  for (int i = 0; i < 2; i++) { v += a * vnoise3(p); p *= 2.1; a *= 0.5; }
-  return v;
-}
-
-// does a surface point see the sun disc through the oculus?
-float sunVis(vec3 P) {
-  float t = (OC.y - P.y) / (-LD.y);                 // march toward the sky
-  vec2 X = P.xz + (-LD.xz) * t;
-  return smoothstep(OR + 0.22, OR - 0.30, length(X - OC.xz));
-}
-
-// distance from a point to the beam axis, vs the beam's local radius
-float beamCore(vec3 P) {
-  vec3 w = P - OC;
-  float along = dot(w, LD);
-  if (along < 0.0) return 0.0;
-  float d = length(w - along * LD);
-  float rad = OR * (1.0 + 0.07 * along);            // gentle spread
-  return smoothstep(rad * 1.9, rad * 0.45, d);
 }
 
 float plaster(vec3 P) {
@@ -87,7 +50,7 @@ float plaster(vec3 P) {
 void main() {
   vec2 uv = (gl_FragCoord.xy * 2.0 - uRes) / uRes.y;
 
-  // ── camera: standing in the rotunda, looking gently up ──
+  // ── camera: standing in the rotunda ──
   vec3 ro = vec3(0.0, 1.7, 3.6);
   vec3 ta = vec3(uSway.x * 0.55, 3.3 - uSway.y * 0.45, -2.5);
   vec3 fw = normalize(ta - ro);
@@ -103,72 +66,47 @@ void main() {
   float tHit = floorHit ? tFl : tSph;
   vec3 P = ro + rd * tHit;
 
-  float I = 0.0;       // scalar luminance — the room is monochrome
+  // lamp energy: slow breathing on top of the proximity swell
+  float E = uGlow * (1.0 + 0.05 * sin(uTime * 0.45));
 
-  if (!floorHit && length(P.xz) < OR * 1.35 && P.y > 0.0) {
-    // ── the oculus: the world outside, bright and churning ──
-    float d = length(P.xz) / OR;
-    float disc = smoothstep(1.06, 0.94, d);
-    float churn = fbm(P.xz * 2.4 + vec2(uTime * 0.05, -uTime * 0.032));
-    float sky = 1.25 * (0.78 + 0.45 * churn);
-    sky *= 0.72 + 0.28 * smoothstep(1.0, 0.25, d);   // limb darkening
-    I += disc * sky;
-    // rim: the stone edge catches the light
-    I += smoothstep(0.13, 0.0, abs(d - 1.0)) * 0.30;
-  } else {
-    float tex = plaster(P);
-    if (floorHit) {
-      // ── floor: dark stone, lit by the pool ──
-      float base = 0.030 + 0.045 * tex;
-      float seam = smoothstep(R, R - 1.6, length(P.xz));   // AO at the wall
-      float pool = sunVis(P) * 1.0;
-      pool *= 0.82 + 0.36 * fbm(P.xz * 3.0);               // texture in the light
-      // faint sheen reflecting the crown, directly under it
-      float sheen = 0.05 * smoothstep(3.6, 0.4, length(P.xz - OC.xz));
-      I += (base + sheen) * seam + pool;
-    } else {
-      // ── the vault: plaster catching skylight from the crown ──
-      vec3 n = -normalize(P);
-      vec3 toO = OC - P;
-      float dd = dot(toO, toO);
-      float skylight = max(dot(n, toO / sqrt(dd)), 0.0) * (4.3 / dd);
-      float base = 0.022 + 0.05 * tex;
-      float bounce = 0.012 * max(dot(n, vec3(0.0, -1.0, 0.0)), 0.0); // floor glow
-      float sun = sunVis(P) * max(dot(n, -LD), 0.0) * 0.7;
-      I += base + skylight * (0.55 + 0.5 * tex) + bounce + sun;
-      // courses: the faintest concentric whisper on the vault
-      float phi = acos(clamp(normalize(P).y, -1.0, 1.0));
-      I += pow(0.5 + 0.5 * cos(phi * 38.0 + tex * 2.0), 8.0) * 0.012;
-    }
+  // ── surface: one low light against the dark ──
+  vec3 n = floorHit ? vec3(0.0, 1.0, 0.0) : -normalize(P);
+  float tex = plaster(P);
+  float albedo = floorHit ? 0.55 + 0.50 * tex : 0.40 + 0.60 * tex;
 
-    // depth: the far side of the room recedes
-    I *= mix(1.0, 0.55, clamp((tHit - 4.0) / 14.0, 0.0, 1.0));
+  vec3 toL = LP - P;
+  float d2 = dot(toL, toL) + 0.03;
+  float lam = max(dot(n, toL * inversesqrt(d2)), 0.0);
+  // softer-than-physical falloff so the lamp's rake reaches the far wall
+  // and the curve of the room emerges from the dark; the wall gets more
+  // energy than the floor so the vault reads without blowing out the pool
+  float K = floorHit ? 0.45 : 0.95;
+  float I = albedo * lam * E * K / pow(d2, 0.72);
+  // the crown stays night-black even when the lamp swells
+  if (!floorHit) I *= mix(1.0, 0.25, smoothstep(1.6, 4.8, P.y));
+
+  // ambient spill: enough for the seam arc and the lower vault to emerge
+  I += albedo * E * 0.05 * exp(-d2 * 0.022);
+
+  // depth: the far side of the room recedes
+  I *= mix(1.0, 0.5, clamp((tHit - 4.0) / 14.0, 0.0, 1.0));
+
+  // ── the lamp's halo: a soft sphere of light in the air ──
+  vec3 w = LP - ro;
+  float tc = dot(w, rd);
+  if (tc > 0.0 && tc < tHit + 0.5) {
+    float h2 = dot(w, w) - tc * tc;
+    I += E * 0.016 / (0.012 + h2 * 3.2);
   }
 
-  // ── the shaft of light: march the haze inside the beam ──
-  float jit = hash(gl_FragCoord.xy + fract(uTime) * 61.7);
-  float tMax = min(tHit, 13.0);
-  float dt = tMax / 26.0;
-  float vol = 0.0;
-  for (int i = 0; i < 26; i++) {
-    vec3 Q = ro + rd * ((float(i) + jit) * dt);
-    float core = beamCore(Q);
-    if (core <= 0.001) continue;
-    float dust = 0.55 + 0.75 * fbm3(Q * vec3(0.9, 0.45, 0.9)
-                  + vec3(uTime * 0.016, -uTime * 0.05, 0.0));
-    float fall = exp(-max(dot(Q - OC, LD), 0.0) * 0.10);    // fades as it falls
-    vol += core * dust * fall * dt;
-  }
-  I += vol * 0.20;
-
-  // ── grade: soft knee, vignette, grain ──
-  I = 1.0 - exp(-I * 1.5);
+  // ── grade: hard knee — true white at the lamp, true black above ──
+  I = 1.0 - exp(-I * 1.7);
   vec2 sc = gl_FragCoord.xy / uRes;
-  I *= smoothstep(1.25, 0.45, distance(sc, vec2(0.5, 0.52)));
-  I += (hash(gl_FragCoord.xy * 0.71 + floor(uTime * 14.0)) - 0.5) * 0.055;
+  I *= smoothstep(1.35, 0.5, distance(sc, vec2(0.5, 0.55)));
+  I += (hash(gl_FragCoord.xy * 0.71 + floor(uTime * 14.0)) - 0.5) * 0.04;
 
-  vec3 ink = vec3(0.925, 0.949, 0.973);   // cool daylight through the oculus
-  vec3 bg  = vec3(0.024, 0.024, 0.027);
+  vec3 ink = vec3(0.945, 0.945, 0.953);
+  vec3 bg  = vec3(0.012, 0.012, 0.014);
   gl_FragColor = vec4(mix(bg, ink, clamp(I, 0.0, 1.0)), 1.0);
 }
 `;
@@ -223,8 +161,9 @@ export default function Dome() {
     const uRes = gl.getUniformLocation(prog, 'uRes');
     const uTime = gl.getUniformLocation(prog, 'uTime');
     const uSway = gl.getUniformLocation(prog, 'uSway');
+    const uGlow = gl.getUniformLocation(prog, 'uGlow');
 
-    // the raymarch is per-pixel heavy — render under-resolution and upscale;
+    // per-pixel raymarch — render under-resolution and upscale;
     // the film grain hides it completely
     const SCALE = 0.7;
     const resize = () => {
@@ -237,12 +176,25 @@ export default function Dome() {
     resize();
     window.addEventListener('resize', resize);
 
-    // barely-there parallax + slow breathing drift
+    // parallax + "the light notices you": lamp swells as the pointer
+    // nears the Register pill. Touch devices just get the breathing.
+    const pill = document.querySelector<HTMLElement>('.register');
     const target = { x: 0, y: 0 };
     const eased = { x: 0, y: 0 };
+    // ?lit pins the lamp at full glow (for OG/screenshot renders)
+    const lit = new URLSearchParams(location.search).has('lit');
+    let prox = lit ? 1 : 0;  // 0 far → 1 on the button
+    let proxEased = 0;
     const onMove = (e: MouseEvent) => {
       target.x = (e.clientX / window.innerWidth - 0.5) * 2;
       target.y = (e.clientY / window.innerHeight - 0.5) * 2;
+      if (pill && !lit) {
+        const r = pill.getBoundingClientRect();
+        const dx = e.clientX - (r.left + r.width / 2);
+        const dy = e.clientY - (r.top + r.height / 2);
+        const reach = Math.min(window.innerWidth, window.innerHeight) * 0.55;
+        prox = Math.max(0, 1 - Math.hypot(dx, dy) / reach);
+      }
     };
     if (!reduce) window.addEventListener('mousemove', onMove);
 
@@ -253,10 +205,13 @@ export default function Dome() {
       const t = (performance.now() - t0) / 1000;
       eased.x += (target.x - eased.x) * 0.02;
       eased.y += (target.y - eased.y) * 0.02;
+      proxEased += (prox - proxEased) * 0.03;
+      const boot = reduce ? 1 : Math.min(1, t / 2.2);        // the lamp ignites
       const driftX = reduce ? 0 : Math.sin(t * 0.05) * 0.05;
       const driftY = reduce ? 0 : Math.sin(t * 0.037) * 0.04;
       gl.uniform1f(uTime, reduce ? 0 : t);
       gl.uniform2f(uSway, eased.x * 0.3 + driftX, eased.y * 0.25 + driftY);
+      gl.uniform1f(uGlow, boot * boot * (0.62 + 0.38 * proxEased));
       gl.drawArrays(gl.TRIANGLES, 0, 3);
       if (!ready) { ready = true; host.classList.add('is-ready'); }
       if (!reduce) raf = requestAnimationFrame(frame);

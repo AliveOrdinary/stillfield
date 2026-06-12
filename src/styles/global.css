@@ -58,15 +58,14 @@ button { cursor: pointer; }
   overflow: hidden;
 }
 /* before hydration (and with JS off) a quiet CSS approximation of the room:
-   a faint glow at the crown and a pool of light low-centre */
+   the lamp's glow low-centre, darkness everywhere else */
 .stage::before {
   content: "";
   position: absolute;
   inset: 0;
   z-index: 0;
   background:
-    radial-gradient(38% 26% at 50% 80%, rgba(var(--halo), 0.16), transparent 70%),
-    radial-gradient(30% 18% at 50% -4%, rgba(var(--halo), 0.18), transparent 75%);
+    radial-gradient(34% 22% at 50% 84%, rgba(var(--halo), 0.17), transparent 70%);
 }
 
 /* ── Dome (WebGL) ──────────────────────────────── */
@@ -139,30 +138,33 @@ button { cursor: pointer; }
   transform: translateX(-50%);
   z-index: 3;
 }
+/* the pill IS the lamp: filled warm white, casting its own glow */
 .register {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   padding: 15px 36px;
-  border: 1px solid rgba(236,233,227,0.5);
+  border: none;
   border-radius: 999px;
-  background: rgba(6,6,7,0.22);
-  color: var(--ink);
+  background: var(--ink);
+  color: #0a0a0a;
   font-family: var(--body);
   font-size: 11.5px;
-  font-weight: 400;
+  font-weight: 500;
   letter-spacing: 0.28em;
   text-indent: 0.28em;
   text-transform: uppercase;
   white-space: nowrap;
-  backdrop-filter: blur(2px);
-  -webkit-backdrop-filter: blur(2px);
-  transition: border-color 0.3s ease, background 0.3s ease, color 0.3s ease;
+  box-shadow:
+    0 0 22px rgba(236, 233, 227, 0.30),
+    0 0 80px rgba(var(--halo), 0.22);
+  transition: box-shadow 0.6s ease, background 0.6s ease;
 }
 .register:hover {
-  background: var(--ink);
-  color: #0a0a0a;
-  border-color: var(--ink);
+  background: #ffffff;
+  box-shadow:
+    0 0 30px rgba(255, 255, 255, 0.45),
+    0 0 110px rgba(var(--halo), 0.30);
 }
 
 /* ── Captions at the edges ─────────────────────── */
