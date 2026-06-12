@@ -3,6 +3,7 @@ import Base from '../layouts/Base.astro';
 import Mark from '../components/Mark.astro';
 import Modal from '../components/Modal';
 import Sound from '../components/Sound';
+import Dome from '../components/Dome';
 import '../styles/global.css';
 import '../styles/modal.css';
 ---
@@ -15,13 +16,9 @@ import '../styles/modal.css';
   <h1 class="sr-only">Stillfield — non-sensory calm pods for spas, hotels &amp; workplaces</h1>
 
   <main class="stage">
-    <!-- The noise of the world: restless grain filling the viewport.
-         Pure CSS/SVG, decorative only; all real content is in the band below. -->
-    <div class="field" aria-hidden="true">
-      <div class="field-churn"></div>
-      <div class="field-grain"></div>
-      <div class="field-vignette"></div>
-    </div>
+    <!-- The rotunda (WebGL) — decorative; all real content is in the HTML below.
+         Before hydration / without JS, a CSS approximation of the light pool shows. -->
+    <Dome client:load />
 
     <header class="topbar">
       <a href="/" class="brand" aria-label="Stillfield home">
@@ -41,12 +38,22 @@ import '../styles/modal.css';
       </button>
     </header>
 
-    <!-- The silence: one perfectly still band where the noise stops. -->
-    <section class="band">
-      <h2 class="lede">A space where the noise ends.</h2>
-      <p class="band-copy">Non-sensory pods that deliver deep calm in 15&ndash;30 minutes. Designed for spas, wellness centres, hotels, and forward-thinking workplaces.</p>
+    <!-- CTA standing in the pool of light beneath the oculus -->
+    <div class="floor-cta">
       <button class="register" data-cta aria-haspopup="dialog">Register Interest</button>
-    </section>
+    </div>
+
+    <!-- captions kept to the edges, leaving the beam clear -->
+    <div class="lower">
+      <div class="caption">
+        <span class="bullet" aria-hidden="true"></span>
+        <h2 class="lede">A space where the noise ends.</h2>
+      </div>
+      <div class="caption caption-right">
+        <span class="bullet" aria-hidden="true"></span>
+        <p class="body-copy">Non-sensory pods that deliver deep calm in 15&ndash;30 minutes. Designed for spas, wellness centres, hotels, and forward-thinking workplaces.</p>
+      </div>
+    </div>
   </main>
 
   <Modal client:idle />
