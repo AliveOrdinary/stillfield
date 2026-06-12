@@ -19,8 +19,11 @@ uniform float uTime;
 uniform float uGlow;   // lamp energy: boot ramp × pointer proximity, 0..1
 
 const float R  = 6.0;                     // dome radius
-const vec3  LP = vec3(0.0, 0.16, -1.5);   // the lamp: just above the floor,
-                                          // where the Register pill stands
+const vec3  LP = vec3(0.0, 0.62, -3.6);   // the lamp: hovering low over the
+                                          // far floor, projected dead-centre
+                                          // behind the pill on the horizon —
+                                          // its bright core must stay hidden
+                                          // by the button
 
 // ── noise ──────────────────────────────────────────
 float hash(vec2 p) {
@@ -61,33 +64,33 @@ void main() {
   // lamp energy: slow breathing on top of the proximity swell
   float E = uGlow * (1.0 + 0.05 * sin(uTime * 0.45));
 
-  // ── material: near-flat, fine-grained — lighting does the shape ──
+  // ── material: troweled plaster and honed stone — a medium mottle
+  // under a fine tooth, present but never smoky ──
   vec3 n = floorHit ? vec3(0.0, 1.0, 0.0) : -normalize(P);
   float az = atan(P.z, P.x);
   float tex = floorHit
-    ? fbm(P.xz * 2.6)
-    : fbm(vec2(az * 7.0, P.y * 2.4)) * 0.5 + fbm(P.xz * 4.0) * 0.5;
-  float albedo = floorHit ? 0.50 + 0.16 * tex : 0.78 + 0.22 * tex;
+    ? fbm(P.xz * 1.7) * 0.45 + fbm(P.xz * 6.5) * 0.55
+    : fbm(vec2(az * 3.2, P.y * 1.1)) * 0.45 + fbm(vec2(az * 9.0, P.y * 3.2)) * 0.55;
+  float albedo = floorHit ? 0.40 + 0.34 * tex : 0.62 + 0.38 * tex;
 
   vec3 toL = LP - P;
   float d2 = dot(toL, toL) + 0.03;
   float lam = max(dot(n, toL * inversesqrt(d2)), 0.0);
   // softer-than-physical falloff so the lamp's rake reaches the far wall
-  float K = floorHit ? 0.45 : 0.85;
+  float K = floorHit ? 0.55 : 0.80;
   float I = albedo * lam * E * K / pow(d2, 0.72);
 
   if (!floorHit) {
     // the crown stays night-black even when the lamp swells
     I *= mix(1.0, 0.25, smoothstep(1.6, 4.8, P.y));
-    // contact occlusion where the wall meets the floor
-    I *= 0.5 + 0.5 * smoothstep(0.0, 0.7, P.y);
+    // light contact occlusion where the wall meets the floor — kept thin
+    // so the glow stays continuous across the seam
+    I *= 0.78 + 0.22 * smoothstep(0.0, 0.45, P.y);
   } else {
-    // contact shadow ring before the wall seam
-    I *= mix(1.0, 0.45, smoothstep(R - 2.2, R - 0.3, length(P.xz)));
     // polished stone: the lamp reflects toward the viewer, the smear
     // widening and dying off with distance from the lamp
     vec3 h = normalize(toL * inversesqrt(d2) + normalize(ro - P));
-    I += E * 0.30 * pow(max(h.y, 0.0), 60.0) * exp(-length(P.xz - LP.xz) * 0.45);
+    I += E * 0.32 * pow(max(h.y, 0.0), 60.0) * exp(-length(P.xz - LP.xz) * 0.30);
   }
 
   // ambient spill: enough for the seam arc and the lower vault to emerge

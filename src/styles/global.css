@@ -134,7 +134,7 @@ button { cursor: pointer; }
 .floor-cta {
   position: absolute;
   left: 50%;
-  top: 81%;
+  top: 71%;
   transform: translateX(-50%);
   z-index: 3;
 }
