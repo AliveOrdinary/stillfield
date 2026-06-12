@@ -5,9 +5,10 @@ import { useEffect, useRef } from 'react';
   the camera stands inside a vast, sealed, black rotunda — no opening, no
   sky. The only light in the room is the lamp: a low glow at the Register
   pill's position on the floor, lighting the chamber from below and falling
-  to true black overhead. The lamp breathes slowly, and swells when the
-  pointer approaches the button. Decorative only (aria-hidden); all real
-  content is server-rendered HTML.
+  to true black overhead. The camera never moves — the room is dead still;
+  the only motion is the lamp's slow breathing, and its swell when the
+  pointer nears the button. Decorative only (aria-hidden); all real content
+  is server-rendered HTML.
 */
 
 const FRAG = /* glsl */ `
@@ -15,7 +16,6 @@ precision highp float;
 
 uniform vec2  uRes;
 uniform float uTime;
-uniform vec2  uSway;   // eased mouse parallax, [-1,1]
 uniform float uGlow;   // lamp energy: boot ramp × pointer proximity, 0..1
 
 const float R  = 6.0;                     // dome radius
@@ -40,20 +40,12 @@ float fbm(vec2 p) {
   return v;
 }
 
-float plaster(vec3 P) {
-  float az = atan(P.z, P.x);
-  float streak = fbm(vec2(az * 2.6, P.y * 0.85));
-  float mottle = fbm(P.xz * 1.4 + P.y * 0.7);
-  return mix(streak, mottle, 0.5);
-}
-
 void main() {
   vec2 uv = (gl_FragCoord.xy * 2.0 - uRes) / uRes.y;
 
-  // ── camera: standing in the rotunda ──
+  // ── camera: standing in the rotunda, fixed ──
   vec3 ro = vec3(0.0, 1.7, 3.6);
-  vec3 ta = vec3(uSway.x * 0.55, 3.3 - uSway.y * 0.45, -2.5);
-  vec3 fw = normalize(ta - ro);
+  vec3 fw = normalize(vec3(0.0, 3.3, -2.5) - ro);
   vec3 rt = normalize(cross(fw, vec3(0.0, 1.0, 0.0)));
   vec3 up = cross(rt, fw);
   vec3 rd = normalize(fw + (uv.x * rt + uv.y * up) * 0.95);  // ~87° fov
@@ -69,21 +61,34 @@ void main() {
   // lamp energy: slow breathing on top of the proximity swell
   float E = uGlow * (1.0 + 0.05 * sin(uTime * 0.45));
 
-  // ── surface: one low light against the dark ──
+  // ── material: near-flat, fine-grained — lighting does the shape ──
   vec3 n = floorHit ? vec3(0.0, 1.0, 0.0) : -normalize(P);
-  float tex = plaster(P);
-  float albedo = floorHit ? 0.55 + 0.50 * tex : 0.40 + 0.60 * tex;
+  float az = atan(P.z, P.x);
+  float tex = floorHit
+    ? fbm(P.xz * 2.6)
+    : fbm(vec2(az * 7.0, P.y * 2.4)) * 0.5 + fbm(P.xz * 4.0) * 0.5;
+  float albedo = floorHit ? 0.50 + 0.16 * tex : 0.78 + 0.22 * tex;
 
   vec3 toL = LP - P;
   float d2 = dot(toL, toL) + 0.03;
   float lam = max(dot(n, toL * inversesqrt(d2)), 0.0);
   // softer-than-physical falloff so the lamp's rake reaches the far wall
-  // and the curve of the room emerges from the dark; the wall gets more
-  // energy than the floor so the vault reads without blowing out the pool
-  float K = floorHit ? 0.45 : 0.95;
+  float K = floorHit ? 0.45 : 0.85;
   float I = albedo * lam * E * K / pow(d2, 0.72);
-  // the crown stays night-black even when the lamp swells
-  if (!floorHit) I *= mix(1.0, 0.25, smoothstep(1.6, 4.8, P.y));
+
+  if (!floorHit) {
+    // the crown stays night-black even when the lamp swells
+    I *= mix(1.0, 0.25, smoothstep(1.6, 4.8, P.y));
+    // contact occlusion where the wall meets the floor
+    I *= 0.5 + 0.5 * smoothstep(0.0, 0.7, P.y);
+  } else {
+    // contact shadow ring before the wall seam
+    I *= mix(1.0, 0.45, smoothstep(R - 2.2, R - 0.3, length(P.xz)));
+    // polished stone: the lamp reflects toward the viewer, the smear
+    // widening and dying off with distance from the lamp
+    vec3 h = normalize(toL * inversesqrt(d2) + normalize(ro - P));
+    I += E * 0.30 * pow(max(h.y, 0.0), 60.0) * exp(-length(P.xz - LP.xz) * 0.45);
+  }
 
   // ambient spill: enough for the seam arc and the lower vault to emerge
   I += albedo * E * 0.05 * exp(-d2 * 0.022);
@@ -160,10 +165,9 @@ export default function Dome() {
 
     const uRes = gl.getUniformLocation(prog, 'uRes');
     const uTime = gl.getUniformLocation(prog, 'uTime');
-    const uSway = gl.getUniformLocation(prog, 'uSway');
     const uGlow = gl.getUniformLocation(prog, 'uGlow');
 
-    // per-pixel raymarch — render under-resolution and upscale;
+    // per-pixel shading — render under-resolution and upscale;
     // the film grain hides it completely
     const SCALE = 0.7;
     const resize = () => {
@@ -176,25 +180,20 @@ export default function Dome() {
     resize();
     window.addEventListener('resize', resize);
 
-    // parallax + "the light notices you": lamp swells as the pointer
-    // nears the Register pill. Touch devices just get the breathing.
+    // "the light notices you": lamp swells as the pointer nears the
+    // Register pill. No parallax — the room itself never moves.
     const pill = document.querySelector<HTMLElement>('.register');
-    const target = { x: 0, y: 0 };
-    const eased = { x: 0, y: 0 };
     // ?lit pins the lamp at full glow (for OG/screenshot renders)
     const lit = new URLSearchParams(location.search).has('lit');
     let prox = lit ? 1 : 0;  // 0 far → 1 on the button
     let proxEased = 0;
     const onMove = (e: MouseEvent) => {
-      target.x = (e.clientX / window.innerWidth - 0.5) * 2;
-      target.y = (e.clientY / window.innerHeight - 0.5) * 2;
-      if (pill && !lit) {
-        const r = pill.getBoundingClientRect();
-        const dx = e.clientX - (r.left + r.width / 2);
-        const dy = e.clientY - (r.top + r.height / 2);
-        const reach = Math.min(window.innerWidth, window.innerHeight) * 0.55;
-        prox = Math.max(0, 1 - Math.hypot(dx, dy) / reach);
-      }
+      if (!pill || lit) return;
+      const r = pill.getBoundingClientRect();
+      const dx = e.clientX - (r.left + r.width / 2);
+      const dy = e.clientY - (r.top + r.height / 2);
+      const reach = Math.min(window.innerWidth, window.innerHeight) * 0.55;
+      prox = Math.max(0, 1 - Math.hypot(dx, dy) / reach);
     };
     if (!reduce) window.addEventListener('mousemove', onMove);
 
@@ -203,14 +202,9 @@ export default function Dome() {
     let ready = false;
     const frame = () => {
       const t = (performance.now() - t0) / 1000;
-      eased.x += (target.x - eased.x) * 0.02;
-      eased.y += (target.y - eased.y) * 0.02;
       proxEased += (prox - proxEased) * 0.03;
       const boot = reduce ? 1 : Math.min(1, t / 2.2);        // the lamp ignites
-      const driftX = reduce ? 0 : Math.sin(t * 0.05) * 0.05;
-      const driftY = reduce ? 0 : Math.sin(t * 0.037) * 0.04;
       gl.uniform1f(uTime, reduce ? 0 : t);
-      gl.uniform2f(uSway, eased.x * 0.3 + driftX, eased.y * 0.25 + driftY);
       gl.uniform1f(uGlow, boot * boot * (0.62 + 0.38 * proxEased));
       gl.drawArrays(gl.TRIANGLES, 0, 3);
       if (!ready) { ready = true; host.classList.add('is-ready'); }
