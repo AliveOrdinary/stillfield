@@ -25,31 +25,35 @@ import '../styles/ambience.css';
         <Mark />
         <span class="wordmark">STILLFIELD</span>
       </a>
-      <div class="topbar-actions">
-        <button class="sound-toggle" data-sound type="button" aria-label="Toggle ambient sound" aria-pressed="false" hidden>
-          <svg class="snd snd-on" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true">
-            <path d="M4 9v6h3l5 4V5L7 9H4z" fill="currentColor" stroke="none"/>
-            <path d="M16 8.5a5 5 0 0 1 0 7"/>
-            <path d="M18.5 6a8.5 8.5 0 0 1 0 12"/>
-          </svg>
-          <svg class="snd snd-off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true">
-            <path d="M4 9v6h3l5 4V5L7 9H4z" fill="currentColor" stroke="none"/>
-            <path d="M16 9.5l5 5M21 9.5l-5 5"/>
-          </svg>
-        </button>
-        <button class="grid-toggle" data-cta aria-label="Register interest" aria-haspopup="dialog">
-          <span></span><span></span><span></span><span></span>
-        </button>
-      </div>
+      <button class="sound-toggle" data-sound type="button" aria-label="Toggle ambient sound" aria-pressed="false" hidden>
+        <svg class="snd snd-on" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true">
+          <path d="M4 9v6h3l5 4V5L7 9H4z" fill="currentColor" stroke="none"/>
+          <path d="M16 8.5a5 5 0 0 1 0 7"/>
+          <path d="M18.5 6a8.5 8.5 0 0 1 0 12"/>
+        </svg>
+        <svg class="snd snd-off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true">
+          <path d="M4 9v6h3l5 4V5L7 9H4z" fill="currentColor" stroke="none"/>
+          <path d="M16 9.5l5 5M21 9.5l-5 5"/>
+        </svg>
+      </button>
     </header>
 
-    <div class="floor-cta">
-      <button class="register" data-cta aria-haspopup="dialog">Register Interest</button>
+    <div class="lower">
+      <p class="caption">
+        <span class="bullet" aria-hidden="true"></span>
+        <span class="lede">A space where the noise ends.</span>
+      </p>
+      <div class="lower-right">
+        <p class="caption">
+          <span class="bullet" aria-hidden="true"></span>
+          <span class="body">Non-sensory pods that deliver deep calm in 15&ndash;30 minutes. Designed for spas, wellness centres, hotels, and forward-thinking workplaces.</span>
+        </p>
+        <button class="register" data-cta aria-haspopup="dialog">Register Interest</button>
+      </div>
     </div>
 
-    <div class="corner" aria-hidden="true">
-      <Mark />
-      <div class="corner-text">STILL<br />FIELD</div>
+    <div class="scroll-cue" aria-hidden="true">
+      <span></span><span></span><span></span>
     </div>
   </main>
 

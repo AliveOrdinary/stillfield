@@ -79,7 +79,7 @@ button { cursor: pointer; }
   z-index: 4;
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: center;
   padding: 38px 56px;
 }
 .brand {
@@ -102,26 +102,26 @@ button { cursor: pointer; }
   flex-shrink: 0;
 }
 
-.grid-toggle {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 5px;
+/* Sound toggle sits in the top-right corner, clear of the centred wordmark.
+   Hidden until JS reveals it (see Ambience); icons swap on .is-on. */
+.sound-toggle {
+  position: absolute;
+  top: 50%;
+  right: 56px;
+  transform: translateY(-50%);
+  display: inline-flex;
   background: none;
   border: none;
   padding: 4px;
+  color: var(--ink-dim);
+  transition: color 0.25s ease;
 }
-.grid-toggle span {
-  width: 7px; height: 7px;
-  border-radius: 1.5px;
-  background: var(--ink);
-  transition: opacity 0.25s ease, transform 0.25s ease;
-  opacity: 0.85;
-}
-.grid-toggle:hover span { opacity: 1; }
-.grid-toggle:hover span:nth-child(1) { transform: translate(-1px,-1px); }
-.grid-toggle:hover span:nth-child(2) { transform: translate(1px,-1px); }
-.grid-toggle:hover span:nth-child(3) { transform: translate(-1px,1px); }
-.grid-toggle:hover span:nth-child(4) { transform: translate(1px,1px); }
+.sound-toggle:hover { color: var(--ink); }
+.sound-toggle .snd { display: block; width: 22px; height: 22px; }
+.sound-toggle .snd-on { display: none; }
+.sound-toggle .snd-off { display: block; }
+.sound-toggle.is-on .snd-on { display: block; }
+.sound-toggle.is-on .snd-off { display: none; }
 
 /* ── Lower content ─────────────────────────────── */
 .lower {
@@ -164,28 +164,9 @@ button { cursor: pointer; }
   line-height: 1.55;
   letter-spacing: 0.01em;
 }
-/* CTA centred on the floor of the dome, seated in a soft pool of light */
-.floor-cta {
-  position: absolute;
-  left: 50%;
-  top: 62%;
-  transform: translateX(-50%);
-  z-index: 3;
-}
-.floor-cta::before {
-  content: "";
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  width: 460px;
-  height: 220px;
-  transform: translate(-50%, -50%);
-  background: radial-gradient(ellipse at center, rgba(236,233,227,0.06), transparent 70%);
-  pointer-events: none;
-  z-index: -1;
-}
 
 .register {
+  margin-top: 26px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -210,24 +191,32 @@ button { cursor: pointer; }
   border-color: var(--ink);
 }
 
-/* ── Corner logo ───────────────────────────────── */
-.corner {
+/* ── Scroll cue ────────────────────────────────── */
+.scroll-cue {
   position: absolute;
-  bottom: 40px;
-  left: 56px;
+  bottom: 36px;
+  left: 50%;
+  transform: translateX(-50%);
   z-index: 3;
   display: inline-flex;
-  align-items: center;
-  gap: 14px;
+  gap: 7px;
 }
-.corner .mark { width: 22px; height: 22px; color: var(--ink-dim); }
-.corner-text {
-  font-family: var(--display);
-  font-size: 10px;
-  letter-spacing: 0.34em;
-  line-height: 1.5;
-  color: var(--ink-dim);
-  padding-left: 0.34em;
+.scroll-cue span {
+  width: 4px; height: 4px;
+  border-radius: 50%;
+  background: var(--ink-dim);
+  opacity: 0.55;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .scroll-cue span {
+    animation: cue-pulse 2.4s ease-in-out infinite;
+  }
+  .scroll-cue span:nth-child(2) { animation-delay: 0.3s; }
+  .scroll-cue span:nth-child(3) { animation-delay: 0.6s; }
+  @keyframes cue-pulse {
+    0%, 100% { opacity: 0.3; }
+    50% { opacity: 0.85; }
+  }
 }
 
 /* ── Screen-reader only ────────────────────────── */
@@ -252,7 +241,7 @@ button { cursor: pointer; }
 }
 
 @media (prefers-reduced-motion: no-preference) {
-  .topbar, .floor-cta, .corner {
+  .topbar, .lower, .scroll-cue {
     opacity: 0;
     animation: fade 1.6s ease 0.8s forwards;
   }
@@ -264,6 +253,12 @@ button { cursor: pointer; }
 /* ── Responsive ────────────────────────────────── */
 @media (max-width: 820px) {
   .topbar { padding: 26px 28px; }
-  .corner { left: 28px; bottom: 28px; display: none; }
-  .floor-cta { top: 70%; }
+  .sound-toggle { right: 28px; }
+  .lower {
+    top: 54%;
+    flex-direction: column;
+    gap: 32px;
+    width: min(420px, 82vw);
+  }
+  .lower-right { width: 100%; }
 }
