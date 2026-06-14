@@ -18,12 +18,16 @@ uniform vec2  uRes;
 uniform float uTime;
 uniform float uGlow;   // lamp energy: boot ramp × pointer proximity, 0..1
 
-const float R  = 6.0;                     // dome radius
-const vec3  LP = vec3(0.0, 0.62, -3.6);   // the lamp: hovering low over the
-                                          // far floor, projected dead-centre
-                                          // behind the pill on the horizon —
-                                          // its bright core must stay hidden
-                                          // by the button
+// ── the room: a true rotunda ──
+// one continuous tall ellipsoid: walls rise steeply from the floor (radius
+// RC) and curve over into a dome at the crown (height RY). A single smooth
+// surface — no drum/dome join, so no seam line on the wall.
+const float RC = 6.0;                      // room radius at the floor
+const float RY = 10.0;                     // crown height (taller than wide → dome)
+const vec3  LP = vec3(0.0, 0.62, -3.6);    // the lamp: low over the far floor,
+                                           // projected dead-centre behind the
+                                           // pill on the horizon; its bright
+                                           // core stays hidden by the button
 
 // ── noise ──────────────────────────────────────────
 float hash(vec2 p) {
@@ -42,62 +46,104 @@ float fbm(vec2 p) {
   for (int i = 0; i < 4; i++) { v += a * vnoise(p); p *= 2.03; a *= 0.5; }
   return v;
 }
+// high-quality per-pixel hash for the film grain (Dave Hoskins). The cheap
+// hash() above has a visible lattice when frozen — this one is clean noise.
+float grain(vec2 p) {
+  vec3 p3 = fract(vec3(p.xyx) * 0.1031);
+  p3 += dot(p3, p3.yzx + 33.33);
+  return fract((p3.x + p3.y) * p3.z);
+}
+// troweled-plaster height field: a long sweeping stroke under a finer
+// tooth. A gentle domain warp keeps it organic — never a regular stripe.
+float surf(vec2 uv) {
+  uv += (fbm(uv * 0.9 + 17.0) - 0.5) * 0.7;          // warp the strokes
+  return fbm(uv * vec2(0.8, 1.25)) * 0.60 + fbm(uv * 3.6) * 0.40;
+}
 
 void main() {
   vec2 uv = (gl_FragCoord.xy * 2.0 - uRes) / uRes.y;
 
   // ── camera: standing in the rotunda, fixed ──
-  vec3 ro = vec3(0.0, 1.7, 3.6);
-  vec3 fw = normalize(vec3(0.0, 3.3, -2.5) - ro);
+  vec3 ro = vec3(0.0, 1.7, 4.6);
+  vec3 fw = normalize(vec3(0.0, 3.6, -2.5) - ro);
   vec3 rt = normalize(cross(fw, vec3(0.0, 1.0, 0.0)));
   vec3 up = cross(rt, fw);
   vec3 rd = normalize(fw + (uv.x * rt + uv.y * up) * 0.95);  // ~87° fov
 
-  // ── analytic hits: sphere (from inside) and floor ──
-  float b = dot(ro, rd);
-  float tSph = -b + sqrt(max(b * b - (dot(ro, ro) - R * R), 0.0));
-  float tFl  = rd.y < -0.001 ? -ro.y / rd.y : 1e5;
-  bool floorHit = tFl < tSph;
-  float tHit = floorHit ? tFl : tSph;
+  // ── analytic interior hits: floor + the ellipsoid wall, nearest wins ──
+  float tFl = rd.y < -1e-4 ? -ro.y / rd.y : 1e9;
+
+  // ellipsoid: solve in unit-sphere space (scale y by RC/RY), far root
+  vec3 sc3 = vec3(1.0 / RC, 1.0 / RY, 1.0 / RC);
+  vec3 roS = ro * sc3;
+  vec3 rdS = rd * sc3;
+  float a = dot(rdS, rdS);
+  float b = dot(roS, rdS);
+  float c = dot(roS, roS) - 1.0;
+  float disc = b * b - a * c;
+  float tWall = disc > 0.0 ? (-b + sqrt(disc)) / a : 1e9;
+
+  bool floorHit = tFl < tWall;
+  float tHit = floorHit ? tFl : tWall;
   vec3 P = ro + rd * tHit;
+
+  // ── surface frame: normal + tangent basis + texture coords ──
+  vec3 n, tu, tv;
+  vec2 suv;
+  if (floorHit) {
+    n = vec3(0.0, 1.0, 0.0);
+    tu = vec3(1.0, 0.0, 0.0); tv = vec3(0.0, 0.0, 1.0);
+    suv = P.xz * 0.42;
+  } else {
+    n = -normalize(P * sc3 * sc3);                    // inward ellipsoid normal
+    float azm = atan(P.z, P.x);
+    tu = normalize(vec3(-sin(azm), 0.0, cos(azm)));   // around
+    tv = normalize(cross(n, tu));                     // up the vault
+    suv = vec2(azm * RC, P.y) * 0.42;                 // continuous everywhere
+  }
+
+  // bump: perturb the normal by the plaster gradient, so the lamp's
+  // grazing light catches real micro-relief (the cure for "artificial")
+  float e = 0.05;
+  float h0 = surf(suv);
+  float hu = surf(suv + vec2(e, 0.0));
+  float hv = surf(suv + vec2(0.0, e));
+  float bumpAmp = floorHit ? 0.05 : 0.22;
+  n = normalize(n - (tu * (hu - h0) + tv * (hv - h0)) / e * bumpAmp);
+
+  float albedo = floorHit ? 0.42 + 0.30 * h0 : 0.60 + 0.40 * h0;
 
   // lamp energy: slow breathing on top of the proximity swell
   float E = uGlow * (1.0 + 0.05 * sin(uTime * 0.45));
 
-  // ── material: troweled plaster and honed stone — a medium mottle
-  // under a fine tooth, present but never smoky ──
-  vec3 n = floorHit ? vec3(0.0, 1.0, 0.0) : -normalize(P);
-  float az = atan(P.z, P.x);
-  float tex = floorHit
-    ? fbm(P.xz * 1.7) * 0.45 + fbm(P.xz * 6.5) * 0.55
-    : fbm(vec2(az * 3.2, P.y * 1.1)) * 0.45 + fbm(vec2(az * 9.0, P.y * 3.2)) * 0.55;
-  float albedo = floorHit ? 0.40 + 0.34 * tex : 0.62 + 0.38 * tex;
-
   vec3 toL = LP - P;
   float d2 = dot(toL, toL) + 0.03;
-  float lam = max(dot(n, toL * inversesqrt(d2)), 0.0);
+  vec3 L = toL * inversesqrt(d2);
+  float lam = max(dot(n, L), 0.0);
   // softer-than-physical falloff so the lamp's rake reaches the far wall
   float K = floorHit ? 0.55 : 0.80;
   float I = albedo * lam * E * K / pow(d2, 0.72);
 
   if (!floorHit) {
-    // the crown stays night-black even when the lamp swells
-    I *= mix(1.0, 0.25, smoothstep(1.6, 4.8, P.y));
-    // light contact occlusion where the wall meets the floor — kept thin
-    // so the glow stays continuous across the seam
-    I *= 0.78 + 0.22 * smoothstep(0.0, 0.45, P.y);
+    // the crown recedes to night-black even when the lamp swells
+    I *= mix(1.0, 0.18, smoothstep(2.5, 7.5, P.y));
+    // thin contact occlusion at the floor seam, glow still continuous
+    I *= 0.80 + 0.20 * smoothstep(0.0, 0.5, P.y);
   } else {
-    // polished stone: the lamp reflects toward the viewer, the smear
-    // widening and dying off with distance from the lamp
-    vec3 h = normalize(toL * inversesqrt(d2) + normalize(ro - P));
-    I += E * 0.32 * pow(max(h.y, 0.0), 60.0) * exp(-length(P.xz - LP.xz) * 0.30);
+    // honed stone: the lamp reflects as a vertical streak running toward
+    // the viewer — narrow across, long in depth, like moonlight on water.
+    // The streak (not a round pool) is what reads the floor as flat.
+    vec3 hlf = normalize(L + normalize(ro - P));
+    vec2 dxz = P.xz - LP.xz;
+    float streak = exp(-(abs(dxz.x) * 1.15 + abs(dxz.y) * 0.20));
+    I += E * 0.34 * pow(max(dot(n, hlf), 0.0), 40.0) * streak;
   }
 
   // ambient spill: enough for the seam arc and the lower vault to emerge
   I += albedo * E * 0.05 * exp(-d2 * 0.022);
 
   // depth: the far side of the room recedes
-  I *= mix(1.0, 0.5, clamp((tHit - 4.0) / 14.0, 0.0, 1.0));
+  I *= mix(1.0, 0.5, clamp((tHit - 4.0) / 16.0, 0.0, 1.0));
 
   // ── the lamp's halo: a soft sphere of light in the air ──
   vec3 w = LP - ro;
@@ -111,7 +157,10 @@ void main() {
   I = 1.0 - exp(-I * 1.7);
   vec2 sc = gl_FragCoord.xy / uRes;
   I *= smoothstep(1.35, 0.5, distance(sc, vec2(0.5, 0.55)));
-  I += (hash(gl_FragCoord.xy * 0.71 + floor(uTime * 14.0)) - 0.5) * 0.04;
+  // static film grain + a touch more in the shadows to break 8-bit
+  // banding. Fixed (no per-frame reseed) so the still room never shimmers.
+  float g = grain(gl_FragCoord.xy) - 0.5;
+  I += g * (0.022 + 0.030 * (1.0 - smoothstep(0.0, 0.30, I)));
 
   vec3 ink = vec3(0.945, 0.945, 0.953);
   vec3 bg  = vec3(0.012, 0.012, 0.014);
@@ -170,9 +219,9 @@ export default function Dome() {
     const uTime = gl.getUniformLocation(prog, 'uTime');
     const uGlow = gl.getUniformLocation(prog, 'uGlow');
 
-    // per-pixel shading — render under-resolution and upscale;
-    // the film grain hides it completely
-    const SCALE = 0.7;
+    // render at device resolution — under-resolution + CSS upscale beats
+    // against the screen grid and shows as interlacing in the dark gradient
+    const SCALE = 1.0;
     const resize = () => {
       const dpr = Math.min(window.devicePixelRatio || 1, 1.5) * SCALE;
       canvas.width = Math.round(host.clientWidth * dpr);
